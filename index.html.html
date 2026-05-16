@@ -1,0 +1,788 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>eCommerce Funnel Simulator — by Ignacio Saad</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root {
+  --bg: #0a0f1e;
+  --bg2: #111827;
+  --bg3: #1a2235;
+  --border: rgba(255,255,255,0.08);
+  --border2: rgba(255,255,255,0.15);
+  --text: #f0f4ff;
+  --text2: #8892a4;
+  --text3: #4a5568;
+  --accent: #00d4aa;
+  --accent2: #0099ff;
+  --danger: #ff4d6d;
+  --warn: #ffaa00;
+  --radius: 12px;
+  --radius-sm: 8px;
+  --font: 'DM Sans', sans-serif;
+  --mono: 'DM Mono', monospace;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  line-height: 1.6;
+}
+
+/* Background grid pattern */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(0,212,170,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,212,170,0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.app { position: relative; z-index: 1; max-width: 1100px; margin: 0 auto; padding: 0 24px 80px; }
+
+/* Header */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 28px 0 40px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 40px;
+}
+.logo { display: flex; align-items: center; gap: 14px; }
+.logo-mark {
+  width: 42px; height: 42px;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  border-radius: 10px;
+  display: flex; flex-direction: column;
+  justify-content: center; align-items: flex-start;
+  padding: 8px 10px; gap: 3px;
+}
+.logo-bar { height: 3px; border-radius: 2px; background: rgba(0,0,0,0.7); }
+.logo-text { }
+.logo-title { font-size: 17px; font-weight: 600; letter-spacing: -0.3px; }
+.logo-sub { font-size: 12px; color: var(--text2); font-family: var(--mono); }
+.header-right { display: flex; align-items: center; gap: 12px; }
+.lang-toggle {
+  display: flex;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 3px;
+}
+.lang-btn {
+  padding: 4px 12px;
+  border-radius: 16px;
+  border: none;
+  background: transparent;
+  color: var(--text2);
+  font-size: 12px;
+  font-family: var(--mono);
+  cursor: pointer;
+  transition: all .2s;
+}
+.lang-btn.active { background: var(--accent); color: #000; font-weight: 500; }
+.author-tag {
+  font-size: 12px;
+  color: var(--text3);
+  font-family: var(--mono);
+}
+.author-tag span { color: var(--accent); }
+
+/* Section titles */
+.section-label {
+  font-size: 11px;
+  font-family: var(--mono);
+  color: var(--accent);
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  margin-bottom: 16px;
+}
+
+/* Tabs */
+.tabs { display: flex; gap: 4px; margin-bottom: 28px; background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 4px; width: fit-content; }
+.tab-btn {
+  padding: 8px 20px;
+  border-radius: var(--radius-sm);
+  border: none;
+  background: transparent;
+  color: var(--text2);
+  font-size: 13px;
+  font-family: var(--font);
+  cursor: pointer;
+  transition: all .2s;
+  display: flex; align-items: center; gap: 6px;
+}
+.tab-btn.active { background: var(--bg3); color: var(--text); border: 1px solid var(--border2); }
+.tab-icon { font-size: 14px; }
+
+/* Input panel */
+.input-panel {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 28px;
+  margin-bottom: 28px;
+}
+.input-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
+.input-item label {
+  display: block;
+  font-size: 11px;
+  color: var(--text2);
+  font-family: var(--mono);
+  margin-bottom: 6px;
+}
+.input-item input {
+  width: 100%;
+  padding: 9px 12px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-size: 14px;
+  font-family: var(--mono);
+  transition: border-color .2s;
+  outline: none;
+}
+.input-item input:focus { border-color: var(--accent); }
+.input-item input:hover { border-color: var(--border2); }
+
+/* CSV panel */
+.csv-panel {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 28px;
+  margin-bottom: 28px;
+}
+.drop-zone {
+  border: 1.5px dashed var(--border2);
+  border-radius: var(--radius);
+  padding: 48px 28px;
+  text-align: center;
+  cursor: pointer;
+  transition: all .2s;
+  position: relative;
+}
+.drop-zone:hover, .drop-zone.dragover { border-color: var(--accent); background: rgba(0,212,170,0.04); }
+.drop-icon { font-size: 36px; margin-bottom: 12px; }
+.drop-title { font-size: 15px; font-weight: 500; margin-bottom: 6px; }
+.drop-sub { font-size: 13px; color: var(--text2); }
+.drop-format { font-size: 11px; font-family: var(--mono); color: var(--text3); margin-top: 12px; background: var(--bg3); border-radius: 6px; padding: 8px 14px; display: inline-block; }
+#file-input { display: none; }
+.or-divider { text-align: center; color: var(--text3); font-size: 12px; margin: 16px 0; font-family: var(--mono); }
+.csv-template { display: flex; gap: 10px; justify-content: center; }
+
+/* Buttons */
+.btn {
+  padding: 10px 22px;
+  border-radius: var(--radius-sm);
+  border: none;
+  font-size: 13px;
+  font-family: var(--font);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all .2s;
+  display: inline-flex; align-items: center; gap: 6px;
+}
+.btn-primary { background: var(--accent); color: #000; }
+.btn-primary:hover { background: #00b894; transform: translateY(-1px); }
+.btn-secondary { background: transparent; border: 1px solid var(--border2); color: var(--text2); }
+.btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+.btn-danger { background: transparent; border: 1px solid rgba(255,77,109,0.3); color: var(--danger); }
+.btn-danger:hover { background: rgba(255,77,109,0.1); }
+.btn-sm { padding: 6px 14px; font-size: 12px; }
+
+/* KPI row */
+.kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 28px; }
+.kpi-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px 20px;
+  position: relative;
+  overflow: hidden;
+}
+.kpi-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+}
+.kpi-card.green::before { background: linear-gradient(90deg, var(--accent), transparent); }
+.kpi-card.blue::before { background: linear-gradient(90deg, var(--accent2), transparent); }
+.kpi-card.warn::before { background: linear-gradient(90deg, var(--warn), transparent); }
+.kpi-card.red::before { background: linear-gradient(90deg, var(--danger), transparent); }
+.kpi-label { font-size: 11px; color: var(--text2); font-family: var(--mono); margin-bottom: 6px; }
+.kpi-val { font-size: 26px; font-weight: 600; font-family: var(--mono); letter-spacing: -1px; }
+.kpi-val.green { color: var(--accent); }
+.kpi-val.red { color: var(--danger); }
+.kpi-val.warn { color: var(--warn); }
+
+/* Main grid */
+.main-grid { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 16px; }
+
+/* Funnel panel */
+.panel {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+}
+.panel-title { font-size: 12px; font-family: var(--mono); color: var(--text2); text-transform: uppercase; letter-spacing: .08em; margin-bottom: 20px; }
+.legend { display: flex; gap: 16px; margin-bottom: 18px; }
+.leg-item { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text2); }
+.leg-dot { width: 8px; height: 8px; border-radius: 2px; }
+
+/* Stage bars */
+.stage-row { display: flex; align-items: center; gap: 10px; margin-bottom: 5px; }
+.stage-name { width: 88px; font-size: 11px; color: var(--text2); text-align: right; flex-shrink: 0; font-family: var(--mono); line-height: 1.3; }
+.bar-wrap { flex: 1; position: relative; height: 30px; }
+.bar-bg { position: absolute; inset: 0; background: var(--bg3); border-radius: 4px; }
+.bar-sim { position: absolute; top: 0; left: 0; height: 100%; border-radius: 4px; opacity: .2; transition: width .4s cubic-bezier(.4,0,.2,1); }
+.bar-real { position: absolute; top: 0; left: 0; height: 100%; border-radius: 4px; transition: width .4s cubic-bezier(.4,0,.2,1); }
+.bar-txt { position: absolute; left: 9px; top: 50%; transform: translateY(-50%); font-size: 11px; font-weight: 500; color: rgba(255,255,255,0.9); font-family: var(--mono); }
+.bar-diff { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); font-size: 10px; font-weight: 500; font-family: var(--mono); }
+.arrow-row { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+.arrow-sp { width: 88px; flex-shrink: 0; }
+.arrow-info { display: flex; align-items: center; gap: 6px; font-size: 10px; color: var(--text3); font-family: var(--mono); }
+.rate-arrow { color: var(--accent); font-weight: 500; }
+
+/* Sliders */
+.slider-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  margin-bottom: 8px;
+  transition: border-color .2s;
+}
+.slider-card.active { border-color: rgba(0,212,170,0.3); background: rgba(0,212,170,0.03); }
+.slider-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 7px; }
+.slider-lbl { font-size: 11px; color: var(--text2); margin-bottom: 3px; }
+.event-tag { font-family: var(--mono); font-size: 9px; background: rgba(0,153,255,0.12); color: var(--accent2); border-radius: 4px; padding: 1px 5px; }
+.slider-rates { display: flex; gap: 8px; align-items: center; font-family: var(--mono); font-size: 11px; }
+.rate-old { color: var(--text3); }
+.rate-new { color: var(--accent); font-weight: 500; }
+.slider-row { display: flex; align-items: center; gap: 8px; }
+.slider-hint { font-size: 10px; color: var(--text3); font-family: var(--mono); white-space: nowrap; }
+.slider-row input[type=range] {
+  flex: 1;
+  -webkit-appearance: none;
+  height: 3px;
+  background: var(--bg3);
+  border-radius: 2px;
+  outline: none;
+}
+.slider-row input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  background: var(--accent);
+  cursor: pointer;
+  transition: transform .15s;
+}
+.slider-row input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.2); }
+.boost-val { font-size: 11px; font-weight: 500; min-width: 36px; text-align: right; font-family: var(--mono); color: var(--text); }
+
+/* Impact box */
+.impact-box {
+  background: rgba(0,212,170,0.07);
+  border: 1px solid rgba(0,212,170,0.2);
+  border-radius: var(--radius);
+  padding: 14px 18px;
+  font-size: 13px;
+  color: var(--accent);
+  margin-top: 16px;
+  line-height: 1.7;
+  display: none;
+}
+.impact-box strong { color: #fff; }
+
+/* Actions row */
+.actions { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
+
+/* Alert */
+.alert {
+  padding: 10px 16px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  margin-bottom: 16px;
+  display: none;
+}
+.alert.error { background: rgba(255,77,109,0.1); border: 1px solid rgba(255,77,109,0.3); color: var(--danger); }
+.alert.success { background: rgba(0,212,170,0.1); border: 1px solid rgba(0,212,170,0.3); color: var(--accent); }
+
+/* Footer */
+.footer { text-align: center; padding: 40px 0 0; border-top: 1px solid var(--border); margin-top: 40px; font-size: 12px; color: var(--text3); font-family: var(--mono); }
+.footer span { color: var(--accent); }
+
+/* Responsive */
+@media(max-width: 768px) {
+  .input-grid { grid-template-columns: repeat(2, 1fr); }
+  .kpi-row { grid-template-columns: repeat(2, 1fr); }
+  .main-grid { grid-template-columns: 1fr; }
+  .tabs { flex-wrap: wrap; }
+}
+@media(max-width: 480px) {
+  .input-grid { grid-template-columns: 1fr; }
+  .header { flex-direction: column; gap: 16px; align-items: flex-start; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- Header -->
+  <header class="header">
+    <div class="logo">
+      <div class="logo-mark">
+        <div class="logo-bar" style="width:18px"></div>
+        <div class="logo-bar" style="width:14px"></div>
+        <div class="logo-bar" style="width:10px"></div>
+        <div class="logo-bar" style="width:6px"></div>
+      </div>
+      <div class="logo-text">
+        <div class="logo-title">eCommerce Funnel Simulator</div>
+        <div class="logo-sub" id="header-sub">Analizá y simulá tu funnel de conversión</div>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="lang-toggle">
+        <button class="lang-btn active" onclick="setLang('es',this)" id="btn-es">ES</button>
+        <button class="lang-btn" onclick="setLang('en',this)" id="btn-en">EN</button>
+      </div>
+      <div class="author-tag">by <span>Ignacio Saad</span></div>
+    </div>
+  </header>
+
+  <!-- Tabs -->
+  <div class="section-label" id="lbl-data-source">// fuente de datos</div>
+  <div class="tabs">
+    <button class="tab-btn active" onclick="showTab('manual',this)" id="tab-manual-btn">
+      <span class="tab-icon">✏️</span> <span data-es="Manual" data-en="Manual">Manual</span>
+    </button>
+    <button class="tab-btn" onclick="showTab('csv',this)" id="tab-csv-btn">
+      <span class="tab-icon">📄</span> <span data-es="CSV / Excel" data-en="CSV / Excel">CSV / Excel</span>
+    </button>
+  </div>
+
+  <!-- Manual panel -->
+  <div id="panel-manual">
+    <div class="input-panel">
+      <div class="input-grid" id="input-grid"></div>
+      <div id="alert-manual" class="alert error"></div>
+      <button class="btn btn-primary" onclick="applyManual()" id="btn-analyze">
+        <span data-es="Analizar funnel" data-en="Analyze funnel">Analizar funnel</span> →
+      </button>
+    </div>
+  </div>
+
+  <!-- CSV panel -->
+  <div id="panel-csv" style="display:none">
+    <div class="csv-panel">
+      <div class="drop-zone" id="drop-zone" onclick="document.getElementById('file-input').click()" ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event)">
+        <div class="drop-icon">📂</div>
+        <div class="drop-title" id="drop-title">Arrastrá tu archivo o hacé clic para seleccionar</div>
+        <div class="drop-sub" id="drop-sub">Soporta .csv, .xlsx y .xls</div>
+        <div class="drop-format" id="drop-format">Columnas: event_name | event_count</div>
+      </div>
+      <input type="file" id="file-input" accept=".csv,.xlsx,.xls" onchange="handleFile(this.files[0])">
+      <div class="or-divider" id="or-divider">— o descargá la plantilla —</div>
+      <div class="csv-template">
+        <button class="btn btn-secondary btn-sm" onclick="downloadTemplate('csv')" id="btn-template-csv">
+          ⬇ Template CSV
+        </button>
+        <button class="btn btn-secondary btn-sm" onclick="downloadTemplate('xlsx')" id="btn-template-xlsx">
+          ⬇ Template Excel
+        </button>
+      </div>
+      <div id="alert-csv" class="alert" style="margin-top:16px"></div>
+    </div>
+  </div>
+
+  <!-- Output -->
+  <div id="funnel-output" style="display:none">
+    <div class="section-label" id="lbl-results">// resultados</div>
+    <div class="kpi-row" id="kpi-row"></div>
+    <div class="main-grid">
+      <div class="panel">
+        <div class="panel-title" id="lbl-funnel">Funnel de conversión</div>
+        <div class="legend">
+          <div class="leg-item"><div class="leg-dot" style="background:#00d4aa"></div><span id="leg-real">Valor real</span></div>
+          <div class="leg-item"><div class="leg-dot" style="background:#00d4aa;opacity:.3"></div><span id="leg-sim">Simulado</span></div>
+        </div>
+        <div id="funnel-bars"></div>
+      </div>
+      <div class="panel">
+        <div class="panel-title" id="lbl-simulator">Simulador de escenarios</div>
+        <div id="sliders-col"></div>
+        <div class="actions">
+          <button class="btn btn-danger btn-sm" onclick="resetBoosts()" id="btn-reset">
+            <span data-es="Resetear simulación" data-en="Reset simulation">Resetear simulación</span>
+          </button>
+        </div>
+      </div>
+    </div>
+    <div class="impact-box" id="impact-box"></div>
+  </div>
+
+  <footer class="footer">
+    <p>eCommerce Funnel Simulator · <span>by Ignacio Saad</span> · Powered by GA4 events</p>
+  </footer>
+</div>
+
+<script>
+const STAGES_ES = [
+  {label:'Sesiones',      event:'session_start',    color:'#00d4aa'},
+  {label:'Vista producto',event:'view_item',         color:'#0099ff'},
+  {label:'Add to cart',   event:'add_to_cart',       color:'#7f77dd'},
+  {label:'Ver carrito',   event:'view_cart',         color:'#9b59b6'},
+  {label:'Checkout',      event:'begin_checkout',    color:'#d4537e'},
+  {label:'Info envío',    event:'add_shipping_info', color:'#e67e22'},
+  {label:'Info pago',     event:'add_payment_info',  color:'#c0392b'},
+  {label:'Compra',        event:'purchase',          color:'#d85a30'},
+];
+const STAGES_EN = [
+  {label:'Sessions',      event:'session_start',    color:'#00d4aa'},
+  {label:'Product view',  event:'view_item',         color:'#0099ff'},
+  {label:'Add to cart',   event:'add_to_cart',       color:'#7f77dd'},
+  {label:'View cart',     event:'view_cart',         color:'#9b59b6'},
+  {label:'Checkout',      event:'begin_checkout',    color:'#d4537e'},
+  {label:'Shipping info', event:'add_shipping_info', color:'#e67e22'},
+  {label:'Payment info',  event:'add_payment_info',  color:'#c0392b'},
+  {label:'Purchase',      event:'purchase',          color:'#d85a30'},
+];
+const DEFAULTS = [18500,9620,3848,2694,1887,1320,924,647];
+
+let lang = 'es';
+let STAGES = STAGES_ES;
+let realVals = [...DEFAULTS];
+let boosts = new Array(8).fill(0);
+
+const T = {
+  es: {
+    headerSub: 'Analizá y simulá tu funnel de conversión',
+    dataSource: '// fuente de datos',
+    results: '// resultados',
+    funnel: 'Funnel de conversión',
+    simulator: 'Simulador de escenarios',
+    legReal: 'Valor real',
+    legSim: 'Simulado',
+    sessions: 'Sesiones totales',
+    realPurchases: 'Compras reales',
+    simPurchases: 'Compras simuladas',
+    potential: 'Ganancia potencial',
+    analyze: 'Analizar funnel',
+    reset: 'Resetear simulación',
+    improve: '+mejora',
+    dropTitle: 'Arrastrá tu archivo o hacé clic para seleccionar',
+    dropSub: 'Soporta .csv, .xlsx y .xls',
+    dropFormat: 'Columnas: event_name | event_count',
+    orDivider: '— o descargá la plantilla —',
+    errorVals: 'Por favor completá todos los valores con números mayores a 0.',
+    errorOrder: 'Los valores deben ser decrecientes de etapa en etapa.',
+    errorFile: 'No se pudo leer el archivo. Verificá el formato.',
+    successFile: '✓ Archivo cargado correctamente.',
+    impactMsg: (stage, boost, delta, rCvr, sCvr) =>
+      `Mejorando <strong>${stage}</strong> en +${boost}pp ganarías <strong>${delta.toLocaleString()} compras más</strong>. Tasa de conversión total: ${rCvr}% → <strong>${sCvr}%</strong>`,
+  },
+  en: {
+    headerSub: 'Analyze and simulate your conversion funnel',
+    dataSource: '// data source',
+    results: '// results',
+    funnel: 'Conversion funnel',
+    simulator: 'Scenario simulator',
+    legReal: 'Real value',
+    legSim: 'Simulated',
+    sessions: 'Total sessions',
+    realPurchases: 'Real purchases',
+    simPurchases: 'Simulated purchases',
+    potential: 'Potential gain',
+    analyze: 'Analyze funnel',
+    reset: 'Reset simulation',
+    improve: '+improve',
+    dropTitle: 'Drag your file or click to select',
+    dropSub: 'Supports .csv, .xlsx and .xls',
+    dropFormat: 'Columns: event_name | event_count',
+    orDivider: '— or download the template —',
+    errorVals: 'Please fill in all values with numbers greater than 0.',
+    errorOrder: 'Values should decrease from stage to stage.',
+    errorFile: 'Could not read the file. Please check the format.',
+    successFile: '✓ File loaded successfully.',
+    impactMsg: (stage, boost, delta, rCvr, sCvr) =>
+      `Improving <strong>${stage}</strong> by +${boost}pp would give you <strong>${delta.toLocaleString()} more purchases</strong>. Total conversion rate: ${rCvr}% → <strong>${sCvr}%</strong>`,
+  }
+};
+
+function setLang(l, btn) {
+  lang = l;
+  STAGES = l === 'es' ? STAGES_ES : STAGES_EN;
+  document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  applyTranslations();
+  if (document.getElementById('funnel-output').style.display !== 'none') render();
+  else buildInputGrid();
+}
+
+function applyTranslations() {
+  const t = T[lang];
+  document.getElementById('header-sub').textContent = t.headerSub;
+  document.getElementById('lbl-data-source').textContent = t.dataSource;
+  if (document.getElementById('lbl-results')) document.getElementById('lbl-results').textContent = t.results;
+  if (document.getElementById('lbl-funnel')) document.getElementById('lbl-funnel').textContent = t.funnel;
+  if (document.getElementById('lbl-simulator')) document.getElementById('lbl-simulator').textContent = t.simulator;
+  if (document.getElementById('leg-real')) document.getElementById('leg-real').textContent = t.legReal;
+  if (document.getElementById('leg-sim')) document.getElementById('leg-sim').textContent = t.legSim;
+  document.getElementById('drop-title').textContent = t.dropTitle;
+  document.getElementById('drop-sub').textContent = t.dropSub;
+  document.getElementById('drop-format').textContent = t.dropFormat;
+  document.getElementById('or-divider').textContent = t.orDivider;
+  document.querySelectorAll('[data-es]').forEach(el => { el.textContent = el.getAttribute('data-' + lang); });
+  buildInputGrid();
+}
+
+function buildInputGrid() {
+  const g = document.getElementById('input-grid');
+  if (!g) return;
+  g.innerHTML = STAGES.map((s, i) =>
+    `<div class="input-item">
+      <label>${s.label}</label>
+      <input type="number" id="inp-${i}" value="${realVals[i]}" min="0" placeholder="0">
+    </div>`
+  ).join('');
+}
+
+function showTab(id, btn) {
+  document.getElementById('panel-manual').style.display = id === 'manual' ? 'block' : 'none';
+  document.getElementById('panel-csv').style.display = id === 'csv' ? 'block' : 'none';
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+function showAlert(id, msg, type) {
+  const el = document.getElementById(id);
+  el.textContent = msg;
+  el.className = 'alert ' + type;
+  el.style.display = 'block';
+  setTimeout(() => { el.style.display = 'none'; }, 4000);
+}
+
+function applyManual() {
+  const t = T[lang];
+  const vals = STAGES.map((_, i) => parseInt(document.getElementById('inp-' + i)?.value, 10) || 0);
+  if (vals.some(v => v <= 0)) { showAlert('alert-manual', t.errorVals, 'error'); return; }
+  realVals = vals;
+  boosts = new Array(8).fill(0);
+  document.getElementById('funnel-output').style.display = 'block';
+  render();
+  document.getElementById('funnel-output').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function calcRates(vals) {
+  return vals.map((v, i) => i === 0 ? 100 : vals[i-1] > 0 ? Math.round(v / vals[i-1] * 100) : 0);
+}
+
+function calcSim(vals, rates) {
+  const out = [vals[0]];
+  for (let i = 1; i < STAGES.length; i++) {
+    const maxBoost = 100 - rates[i];
+    const safeBoost = Math.min(boosts[i], maxBoost);
+    const r = Math.min(100, rates[i] + safeBoost);
+    out.push(Math.round(out[i-1] * r / 100));
+  }
+  return out;
+}
+
+function render() {
+  const t = T[lang];
+  const rates = calcRates(realVals);
+  const simVals = calcSim(realVals, rates);
+  const maxV = realVals[0] || 1;
+  const rP = realVals[STAGES.length - 1];
+  const sP = simVals[STAGES.length - 1];
+  const delta = sP - rP;
+  const rCvr = (rP / realVals[0] * 100).toFixed(2);
+  const sCvr = (sP / realVals[0] * 100).toFixed(2);
+
+  // KPIs
+  document.getElementById('kpi-row').innerHTML = [
+    {label: t.sessions, val: realVals[0].toLocaleString(), cls: 'blue'},
+    {label: t.realPurchases, val: rP.toLocaleString(), cls: 'green'},
+    {label: t.simPurchases, val: sP.toLocaleString(), valCls: 'green', cls: 'green'},
+    {label: t.potential, val: (delta >= 0 ? '+' : '') + delta.toLocaleString(), valCls: delta > 0 ? 'green' : delta < 0 ? 'red' : '', cls: delta > 0 ? 'green' : delta < 0 ? 'red' : 'warn'},
+  ].map(k => `<div class="kpi-card ${k.cls}"><div class="kpi-label">${k.label}</div><div class="kpi-val ${k.valCls||''}">${k.val}</div></div>`).join('');
+
+  // Funnel bars
+  let fhtml = '';
+  for (let i = 0; i < STAGES.length; i++) {
+    const rp = Math.round(realVals[i] / maxV * 100);
+    const sp = Math.round(simVals[i] / maxV * 100);
+    const diff = simVals[i] - realVals[i];
+    const dc = diff > 0 ? '#00d4aa' : diff < 0 ? '#ff4d6d' : 'var(--text3)';
+    if (i > 0) {
+      const maxBoost = 100 - rates[i];
+      const safeBoost = Math.min(boosts[i], maxBoost);
+      const sr = Math.min(100, rates[i] + safeBoost);
+      fhtml += `<div class="arrow-row"><div class="arrow-sp"></div>
+        <div class="arrow-info">
+          <svg width="10" height="10"><path d="M5 0L5 8M2 5L5 9L8 5" stroke="var(--text3)" stroke-width="1.2" fill="none"/></svg>
+          <span>${rates[i]}%</span>
+          ${safeBoost > 0 ? `<span class="rate-arrow">→ ${sr}%</span>` : ''}
+        </div>
+      </div>`;
+    }
+    fhtml += `<div class="stage-row">
+      <div class="stage-name">${STAGES[i].label}</div>
+      <div class="bar-wrap">
+        <div class="bar-bg"></div>
+        <div class="bar-sim" style="width:${sp}%;background:${STAGES[i].color}"></div>
+        <div class="bar-real" style="width:${rp}%;background:${STAGES[i].color}"></div>
+        <span class="bar-txt">${realVals[i].toLocaleString()}</span>
+        ${diff !== 0 ? `<span class="bar-diff" style="color:${dc}">${diff > 0 ? '+' : ''}${diff.toLocaleString()}</span>` : ''}
+      </div>
+    </div>`;
+  }
+  document.getElementById('funnel-bars').innerHTML = fhtml;
+
+  // Sliders — límite dinámico: 100 - tasa actual
+  let shtml = '';
+  for (let j = 1; j < STAGES.length; j++) {
+    const maxBoost = Math.max(0, 100 - rates[j]);
+    const safeBoost = Math.min(boosts[j], maxBoost);
+    const sr = Math.min(100, rates[j] + safeBoost);
+    const isActive = safeBoost > 0;
+    shtml += `<div class="slider-card ${isActive ? 'active' : ''}">
+      <div class="slider-header">
+        <div>
+          <div class="slider-lbl">${STAGES[j-1].label} → ${STAGES[j].label}</div>
+          <span class="event-tag">${STAGES[j].event}</span>
+        </div>
+        <div class="slider-rates">
+          <span class="rate-old">${rates[j]}%</span>
+          ${isActive ? `<span class="rate-new">→ ${sr}%</span>` : ''}
+        </div>
+      </div>
+      <div class="slider-row">
+        <span class="slider-hint">${t.improve}</span>
+        <input type="range" min="0" max="${maxBoost}" step="1" value="${safeBoost}" data-idx="${j}">
+        <span class="boost-val">${safeBoost > 0 ? '+' : ''}${safeBoost}pp</span>
+      </div>
+    </div>`;
+  }
+  document.getElementById('sliders-col').innerHTML = shtml;
+
+  // Impact box
+  const ib = document.getElementById('impact-box');
+  if (delta > 0) {
+    const bi = boosts.reduce((best, v, i) => i > 0 && v > boosts[best] ? i : best, 1);
+    const stageName = `${STAGES[bi-1].label} → ${STAGES[bi].label}`;
+    ib.innerHTML = t.impactMsg(stageName, Math.min(boosts[bi], 100 - rates[bi]), delta, rCvr, sCvr);
+    ib.style.display = 'block';
+  } else {
+    ib.style.display = 'none';
+  }
+}
+
+// Slider event delegation
+document.addEventListener('input', e => {
+  if (e.target.dataset.idx) {
+    boosts[+e.target.dataset.idx] = +e.target.value;
+    render();
+  }
+});
+
+function resetBoosts() {
+  boosts = new Array(8).fill(0);
+  render();
+}
+
+// CSV/Excel handling
+function handleFile(file) {
+  if (!file) return;
+  const t = T[lang];
+  const ext = file.name.split('.').pop().toLowerCase();
+  if (ext === 'csv') {
+    Papa.parse(file, {
+      header: true,
+      skipEmptyLines: true,
+      complete: res => processFileData(res.data, t),
+      error: () => showAlert('alert-csv', t.errorFile, 'error'),
+    });
+  } else if (ext === 'xlsx' || ext === 'xls') {
+    const reader = new FileReader();
+    reader.onload = ev => {
+      try {
+        const wb = XLSX.read(ev.target.result, { type: 'binary' });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const data = XLSX.utils.sheet_to_json(ws);
+        processFileData(data, t);
+      } catch { showAlert('alert-csv', t.errorFile, 'error'); }
+    };
+    reader.readAsBinaryString(file);
+  } else {
+    showAlert('alert-csv', t.errorFile, 'error');
+  }
+}
+
+function processFileData(data, t) {
+  const eventMap = {};
+  data.forEach(row => {
+    const key = (row.event_name || row['Event Name'] || row['Nombre del evento'] || '').trim().toLowerCase();
+    const val = parseInt(row.event_count || row['Event Count'] || row['Número de eventos'] || row['Numero de eventos'] || 0, 10);
+    if (key && val) eventMap[key] = val;
+  });
+  const mapped = STAGES.map((s, i) => eventMap[s.event] || null);
+  if (mapped.some(v => v === null || v <= 0)) {
+    // try partial — use defaults for missing
+    const partial = mapped.map((v, i) => v || DEFAULTS[i]);
+    realVals = partial;
+  } else {
+    realVals = mapped;
+  }
+  boosts = new Array(8).fill(0);
+  showAlert('alert-csv', t.successFile, 'success');
+  document.getElementById('funnel-output').style.display = 'block';
+  render();
+  document.getElementById('funnel-output').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function downloadTemplate(type) {
+  const headers = ['event_name', 'event_count'];
+  const rows = STAGES_ES.map((s, i) => [s.event, DEFAULTS[i]]);
+  if (type === 'csv') {
+    const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'funnel-template.csv'; a.click();
+  } else {
+    const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+    const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Funnel');
+    XLSX.writeFile(wb, 'funnel-template.xlsx');
+  }
+}
+
+function onDragOver(e) { e.preventDefault(); document.getElementById('drop-zone').classList.add('dragover'); }
+function onDragLeave() { document.getElementById('drop-zone').classList.remove('dragover'); }
+function onDrop(e) {
+  e.preventDefault();
+  document.getElementById('drop-zone').classList.remove('dragover');
+  const file = e.dataTransfer.files[0];
+  if (file) handleFile(file);
+}
+
+// Init
+buildInputGrid();
+applyManual();
+</script>
+</body>
+</html>
