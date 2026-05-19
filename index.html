@@ -861,17 +861,25 @@ function processFileData(data, t) {
   });
   const mapped = STAGES.map((s, i) => eventMap[s.event] || null);
   if (mapped.some(v => v === null || v <= 0)) {
-    // try partial — use defaults for missing
     const partial = mapped.map((v, i) => v || DEFAULTS[i]);
     realVals = partial;
   } else {
     realVals = mapped;
   }
   boosts = new Array(8).fill(0);
+  syncInputsWithRealVals();
   showAlert('alert-csv', t.successFile, 'success');
   document.getElementById('funnel-output').style.display = 'block';
+  document.getElementById('sliders-col').innerHTML = '';
   render();
   document.getElementById('funnel-output').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function syncInputsWithRealVals() {
+  STAGES.forEach((_, i) => {
+    const input = document.getElementById('inp-' + i);
+    if (input) input.value = realVals[i];
+  });
 }
 
 function downloadTemplate(type) {
