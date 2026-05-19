@@ -657,11 +657,13 @@ function renderKPIs() {
   const rP = realVals[STAGES.length - 1];
   const sP = simVals[STAGES.length - 1];
   const delta = sP - rP;
+  const hasSimulation = boosts.some(b => b > 0);
+
   document.getElementById('kpi-row').innerHTML = [
     {label: t.sessions, val: realVals[0].toLocaleString(), cls: 'blue'},
     {label: t.realPurchases, val: rP.toLocaleString(), cls: 'green'},
-    {label: t.simPurchases, val: sP.toLocaleString(), valCls: 'green', cls: 'green'},
-    {label: t.potential, val: delta > 0 ? '+' + delta.toLocaleString() : '0', valCls: delta > 0 ? 'green' : '', cls: delta > 0 ? 'green' : 'warn'},
+    {label: t.simPurchases, val: hasSimulation ? sP.toLocaleString() : '—', valCls: hasSimulation ? 'green' : '', cls: 'green'},
+    {label: t.potential, val: hasSimulation && delta > 0 ? '+' + delta.toLocaleString() : '—', valCls: hasSimulation && delta > 0 ? 'green' : '', cls: hasSimulation && delta > 0 ? 'green' : 'warn'},
   ].map(k => `<div class="kpi-card ${k.cls}"><div class="kpi-label">${k.label}</div><div class="kpi-val ${k.valCls||''}">${k.val}</div></div>`).join('');
 }
 
@@ -694,7 +696,7 @@ function renderBars() {
         <div class="bar-sim" style="width:${sp}%;background:${STAGES[i].color}"></div>
         <div class="bar-real" style="width:${rp}%;background:${STAGES[i].color}"></div>
         <span class="bar-txt">${realVals[i].toLocaleString()}</span>
-        ${diff > 0 ? `<span class="bar-diff" style="color:#00d4aa">+${diff.toLocaleString()}</span>` : ''}
+        ${diff > 0 && boosts.some(b => b > 0) ? `<span class="bar-diff" style="color:#00d4aa">+${diff.toLocaleString()}</span>` : ''}
       </div>
     </div>`;
   }
@@ -775,7 +777,7 @@ function renderImpact() {
   const rCvr = (rP / realVals[0] * 100).toFixed(2);
   const sCvr = (sP / realVals[0] * 100).toFixed(2);
   const ib = document.getElementById('impact-box');
-  if (delta > 0) {
+  if (delta > 0 && boosts.some(b => b > 0)) {
     const bi = boosts.reduce((best, v, i) => i > 0 && v > boosts[best] ? i : best, 1);
     const stageName = `${STAGES[bi-1].label} → ${STAGES[bi].label}`;
     ib.innerHTML = t.impactMsg(stageName, Math.min(boosts[bi], 100 - rates[bi]), delta, rCvr, sCvr);
