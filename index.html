@@ -642,25 +642,31 @@ function calcSim(vals, rates) {
 }
 
 function render() {
+  renderKPIs();
+  renderBars();
+  renderSliders();
+  renderImpact();
+}
+
+function renderKPIs() {
   const t = T[lang];
   const rates = calcRates(realVals);
   const simVals = calcSim(realVals, rates);
-  const maxV = realVals[0] || 1;
   const rP = realVals[STAGES.length - 1];
   const sP = simVals[STAGES.length - 1];
   const delta = sP - rP;
-  const rCvr = (rP / realVals[0] * 100).toFixed(2);
-  const sCvr = (sP / realVals[0] * 100).toFixed(2);
-
-  // KPIs
   document.getElementById('kpi-row').innerHTML = [
     {label: t.sessions, val: realVals[0].toLocaleString(), cls: 'blue'},
     {label: t.realPurchases, val: rP.toLocaleString(), cls: 'green'},
     {label: t.simPurchases, val: sP.toLocaleString(), valCls: 'green', cls: 'green'},
     {label: t.potential, val: (delta >= 0 ? '+' : '') + delta.toLocaleString(), valCls: delta > 0 ? 'green' : delta < 0 ? 'red' : '', cls: delta > 0 ? 'green' : delta < 0 ? 'red' : 'warn'},
   ].map(k => `<div class="kpi-card ${k.cls}"><div class="kpi-label">${k.label}</div><div class="kpi-val ${k.valCls||''}">${k.val}</div></div>`).join('');
+}
 
-  // Funnel bars
+function renderBars() {
+  const rates = calcRates(realVals);
+  const simVals = calcSim(realVals, rates);
+  const maxV = realVals[0] || 1;
   let fhtml = '';
   for (let i = 0; i < STAGES.length; i++) {
     const rp = Math.round(realVals[i] / maxV * 100);
@@ -691,8 +697,45 @@ function render() {
     </div>`;
   }
   document.getElementById('funnel-bars').innerHTML = fhtml;
+}
 
-  // Sliders — límite dinámico: 100 - tasa actual
+function renderSliders() {
+  // Solo renderiza sliders si no existen todavía
+  const existing = document.querySelectorAll('[data-idx]');
+  if (existing.length > 0) {
+    // Solo actualiza los valores visuales sin recrear los sliders
+    const rates = calcRates(realVals);
+    const simVals = calcSim(realVals, rates);
+    existing.forEach(slider => {
+      const j = +slider.dataset.idx;
+      const maxBoost = Math.max(0, 100 - rates[j]);
+      const safeBoost = Math.min(boosts[j], maxBoost);
+      const sr = Math.min(100, rates[j] + safeBoost);
+      const card = slider.closest('.slider-card');
+      if (card) {
+        card.classList.toggle('active', safeBoost > 0);
+        const rateNew = card.querySelector('.rate-new');
+        if (safeBoost > 0) {
+          if (rateNew) rateNew.textContent = `→ ${sr}%`;
+          else {
+            const ratesDiv = card.querySelector('.slider-rates');
+            if (ratesDiv) ratesDiv.insertAdjacentHTML('beforeend', `<span class="rate-new">→ ${sr}%</span>`);
+          }
+        } else if (rateNew) rateNew.remove();
+        const boostVal = card.querySelector('.boost-val');
+        if (boostVal) boostVal.textContent = `${safeBoost > 0 ? '+' : ''}${safeBoost}pp`;
+        slider.max = maxBoost;
+      }
+    });
+    return;
+  }
+  // Primera vez — crea los sliders
+  buildSliders();
+}
+
+function buildSliders() {
+  const t = T[lang];
+  const rates = calcRates(realVals);
   let shtml = '';
   for (let j = 1; j < STAGES.length; j++) {
     const maxBoost = Math.max(0, 100 - rates[j]);
@@ -718,8 +761,17 @@ function render() {
     </div>`;
   }
   document.getElementById('sliders-col').innerHTML = shtml;
+}
 
-  // Impact box
+function renderImpact() {
+  const t = T[lang];
+  const rates = calcRates(realVals);
+  const simVals = calcSim(realVals, rates);
+  const rP = realVals[STAGES.length - 1];
+  const sP = simVals[STAGES.length - 1];
+  const delta = sP - rP;
+  const rCvr = (rP / realVals[0] * 100).toFixed(2);
+  const sCvr = (sP / realVals[0] * 100).toFixed(2);
   const ib = document.getElementById('impact-box');
   if (delta > 0) {
     const bi = boosts.reduce((best, v, i) => i > 0 && v > boosts[best] ? i : best, 1);
@@ -735,18 +787,33 @@ function render() {
 function handleSlider(e) {
   if (e.target.dataset.idx !== undefined) {
     boosts[+e.target.dataset.idx] = +e.target.value;
-    render();
+    renderKPIs();
+    renderBars();
+    renderImpact();
+    // Solo actualiza valores visuales sin recrear sliders
+    const rates = calcRates(realVals);
+    const j = +e.target.dataset.idx;
+    const maxBoost = Math.max(0, 100 - rates[j]);
+    const safeBoost = Math.min(boosts[j], maxBoost);
+    const sr = Math.min(100, rates[j] + safeBoost);
+    const card = e.target.closest('.slider-card');
+    if (card) {
+      card.classList.toggle('active', safeBoost > 0);
+      let rateNew = card.querySelector('.rate-new');
+      if (safeBoost > 0) {
+        if (rateNew) rateNew.textContent = `→ ${sr}%`;
+        else {
+          const ratesDiv = card.querySelector('.slider-rates');
+          if (ratesDiv) ratesDiv.insertAdjacentHTML('beforeend', `<span class="rate-new">→ ${sr}%</span>`);
+        }
+      } else if (rateNew) rateNew.remove();
+      const boostVal = card.querySelector('.boost-val');
+      if (boostVal) boostVal.textContent = `${safeBoost > 0 ? '+' : ''}${safeBoost}pp`;
+    }
   }
 }
 document.addEventListener('input', handleSlider);
 document.addEventListener('change', handleSlider);
-document.addEventListener('touchmove', function(e) {
-  if (e.target.dataset.idx !== undefined) {
-    e.preventDefault();
-    boosts[+e.target.dataset.idx] = +e.target.value;
-    render();
-  }
-}, { passive: false });
 
 function resetBoosts() {
   boosts = new Array(8).fill(0);
