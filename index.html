@@ -659,7 +659,7 @@ function renderKPIs() {
     {label: t.sessions, val: realVals[0].toLocaleString(), cls: 'blue'},
     {label: t.realPurchases, val: rP.toLocaleString(), cls: 'green'},
     {label: t.simPurchases, val: sP.toLocaleString(), valCls: 'green', cls: 'green'},
-    {label: t.potential, val: (delta >= 0 ? '+' : '') + delta.toLocaleString(), valCls: delta > 0 ? 'green' : delta < 0 ? 'red' : '', cls: delta > 0 ? 'green' : delta < 0 ? 'red' : 'warn'},
+    {label: t.potential, val: delta > 0 ? '+' + delta.toLocaleString() : '0', valCls: delta > 0 ? 'green' : '', cls: delta > 0 ? 'green' : 'warn'},
   ].map(k => `<div class="kpi-card ${k.cls}"><div class="kpi-label">${k.label}</div><div class="kpi-val ${k.valCls||''}">${k.val}</div></div>`).join('');
 }
 
@@ -692,7 +692,7 @@ function renderBars() {
         <div class="bar-sim" style="width:${sp}%;background:${STAGES[i].color}"></div>
         <div class="bar-real" style="width:${rp}%;background:${STAGES[i].color}"></div>
         <span class="bar-txt">${realVals[i].toLocaleString()}</span>
-        ${diff !== 0 ? `<span class="bar-diff" style="color:${dc}">${diff > 0 ? '+' : ''}${diff.toLocaleString()}</span>` : ''}
+        ${diff > 0 ? `<span class="bar-diff" style="color:#00d4aa">+${diff.toLocaleString()}</span>` : ''}
       </div>
     </div>`;
   }
