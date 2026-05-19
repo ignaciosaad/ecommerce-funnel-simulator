@@ -622,6 +622,8 @@ function applyManual() {
   realVals = vals;
   boosts = new Array(8).fill(0);
   document.getElementById('funnel-output').style.display = 'block';
+  // Forzar rebuild de sliders desde cero
+  document.getElementById('sliders-col').innerHTML = '';
   render();
   document.getElementById('funnel-output').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
@@ -893,9 +895,8 @@ function onDrop(e) {
   if (file) handleFile(file);
 }
 
-// Init
+// Init — mostrar inputs pero NO calcular hasta que el usuario presione Analizar
 buildInputGrid();
-applyManual();
 </script>
 </body>
 </html>
