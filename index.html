@@ -534,7 +534,9 @@ const T = {
     errorFile: 'No se pudo leer el archivo. Verificá el formato.',
     successFile: '✓ Archivo cargado correctamente.',
     impactMsg: (stage, boost, delta, rCvr, sCvr) =>
-      `Mejorando <strong>${stage}</strong> en +${boost}pp ganarías <strong>${delta.toLocaleString()} compras más</strong>. Tasa de conversión total: ${rCvr}% → <strong>${sCvr}%</strong>`,
+  `Mejorando <strong>${stage}</strong> en +${boost}pp ganarías <strong>${delta.toLocaleString()} compras más</strong>. Tasa de conversión total: ${rCvr}% → <strong>${sCvr}%</strong>`,
+    impactMsgMulti: (count, delta, rCvr, sCvr) =>
+  `Mejorando <strong>${count} etapas del funnel</strong> ganarías <strong>${delta.toLocaleString()} compras más</strong>. Tasa de conversión total: ${rCvr}% → <strong>${sCvr}%</strong>`,
   },
   en: {
     headerSub: 'Analyze and simulate your conversion funnel',
@@ -560,7 +562,9 @@ const T = {
     errorFile: 'Could not read the file. Please check the format.',
     successFile: '✓ File loaded successfully.',
     impactMsg: (stage, boost, delta, rCvr, sCvr) =>
-      `Improving <strong>${stage}</strong> by +${boost}pp would give you <strong>${delta.toLocaleString()} more purchases</strong>. Total conversion rate: ${rCvr}% → <strong>${sCvr}%</strong>`,
+  `Improving <strong>${stage}</strong> by +${boost}pp would give you <strong>${delta.toLocaleString()} more purchases</strong>. Total conversion rate: ${rCvr}% → <strong>${sCvr}%</strong>`,
+    impactMsgMulti: (count, delta, rCvr, sCvr) =>
+  `Improving <strong>${count} funnel stages</strong> would give you <strong>${delta.toLocaleString()} more purchases</strong>. Total conversion rate: ${rCvr}% → <strong>${sCvr}%</strong>`,
   }
 };
 
@@ -779,10 +783,22 @@ function renderImpact() {
   const rCvr = (rP / realVals[0] * 100).toFixed(2);
   const sCvr = (sP / realVals[0] * 100).toFixed(2);
   const ib = document.getElementById('impact-box');
+
   if (delta > 0 && boosts.some(b => b > 0)) {
-    const bi = boosts.reduce((best, v, i) => i > 0 && v > boosts[best] ? i : best, 1);
-    const stageName = `${STAGES[bi-1].label} → ${STAGES[bi].label}`;
-    ib.innerHTML = t.impactMsg(stageName, Math.min(boosts[bi], 100 - rates[bi]), delta, rCvr, sCvr);
+    // Contar cuántas etapas tienen boost activo
+    const activeBoosts = boosts.filter((b, i) => i > 0 && b > 0);
+    const activeCount = activeBoosts.length;
+
+    if (activeCount === 1) {
+      // Una sola etapa mejorada — mensaje específico
+      const bi = boosts.findIndex((b, i) => i > 0 && b > 0);
+      const stageName = `${STAGES[bi-1].label} → ${STAGES[bi].label}`;
+      const safeBoost = Math.min(boosts[bi], 100 - rates[bi]);
+      ib.innerHTML = t.impactMsg(stageName, safeBoost, delta, rCvr, sCvr);
+    } else {
+      // Múltiples etapas mejoradas — mensaje combinado
+      ib.innerHTML = t.impactMsgMulti(activeCount, delta, rCvr, sCvr);
+    }
     ib.style.display = 'block';
   } else {
     ib.style.display = 'none';
